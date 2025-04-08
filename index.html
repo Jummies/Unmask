@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unmasking Journey</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: black;
+      color: white;
+      font-family: 'Helvetica Neue', Inter, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite ease-in-out;
+      opacity: 0;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    #container {
+      max-width: 600px;
+      text-align: center;
+      padding: 20px;
+      z-index: 1;
+    }
+
+    .question {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: fadeIn 1s forwards;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      background: transparent;
+      border: 1px solid white;
+      color: white;
+      width: 100%;
+      font-size: 1rem;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    input[type="text"]:focus, input[type="text"]:hover {
+      border-color: #999;
+    }
+
+    button {
+      margin-top: 20px;
+      background: none;
+      border: 1px solid white;
+      color: white;
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 6px;
+    }
+
+    button:hover {
+      background: white;
+      color: black;
+      transform: scale(1.05);
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    #result {
+      white-space: pre-line;
+      margin-top: 20px;
+      font-size: 1.2rem;
+      line-height: 1.6;
+      opacity: 0;
+      animation: fadeIn 1s forwards;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="question" class="question"></div>
+    <input id="answer" type="text" placeholder="Type your answer...">
+    <button onclick="nextStep()">Next</button>
+    <div id="result"></div>
+  </div>
+  <script>
+    let current = 0;
+    const conversation = [];
+    const qEl = document.getElementById('question');
+    const aEl = document.getElementById('answer');
+    const resultEl = document.getElementById('result');
+
+    const systemPrompt = `I want to uncover the mask and I recently wearing the roles im playing the illusions I believing please guide me throughthe process by asking 10 reflecting questions one at a time to help me recognise the stories im telling myself after i answer the 10th question please step into a role of my higher self and analyse my responses identify the top negative patterns present in my life and the top positive patterns i can embrace and grow be direct and truthful tough love is welcome provide me daily affirmations to support my growth actionable steps to change my behaviours and embody my authentic self and a message of encouragement from my height self to celebrate how far Ive come on my journey.`;
+
+    async function askNextQuestion() {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer YOUR_OPENAI_API_KEY',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...conversation
+          ]
+        })
+      });
+      const data = await response.json();
+      const message = data.choices[0].message.content;
+      qEl.textContent = message;
+      qEl.style.animation = 'fadeIn 1s forwards';
+    }
+
+    async function nextStep() {
+      const val = aEl.value.trim();
+      if (!val) return;
+      conversation.push({ role: 'user', content: val });
+      aEl.value = '';
+      current++;
+
+      if (current < 10) {
+        await conversation.push({ role: 'assistant', content: qEl.textContent });
+        await askNextQuestion();
+      } else {
+        // Final analysis
+        qEl.style.display = 'none';
+        aEl.style.display = 'none';
+        document.querySelector('button').style.display = 'none';
+        resultEl.textContent = 'Analyzing your journey...';
+
+        const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer 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',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-4',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              ...conversation
+            ]
+          })
+        });
+
+        const finalData = await finalResponse.json();
+        const finalMessage = finalData.choices[0].message.content;
+        resultEl.textContent = finalMessage;
+        resultEl.style.animation = 'fadeIn 1s forwards';
+
+        // Email the result (mocked with webhook or service)
+        fetch('https://maker.ifttt.com/trigger/send_email/with/key/b2PuzSH3AYhn5vh2hvmES-', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            value1: 'jumpark1210@gmail.com',
+            value2: finalMessage,
+            value3: JSON.stringify(conversation)
+          })
+        });
+      }
+    }
+
+    askNextQuestion();
+
+    // Generate stars
+    for (let i = 0; i < 100; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.top = Math.random() * 100 + 'vh';
+      star.style.left = Math.random() * 100 + 'vw';
+      star.style.animationDelay = (Math.random() * 5) + 's';
+      document.body.appendChild(star);
+    }
+  </script>
+</body>
+</html>
