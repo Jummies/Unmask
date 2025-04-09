@@ -1,3 +1,5 @@
+// File: api/ask.js
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -11,7 +13,6 @@ export default async function handler(req, res) {
   };
 
   try {
-    // Always prepend the system message
     const messages = [systemPrompt, ...(conversation || [])];
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -28,9 +29,9 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    if (data.error) {
-      console.error(data.error);
-      return res.status(500).json({ error: data.error.message });
+    if (!data || !data.choices || !data.choices.length || !data.choices[0].message) {
+      console.error('Invalid response from OpenAI:', data);
+      return res.status(500).json({ error: 'Invalid response structure from OpenAI' });
     }
 
     res.status(200).json(data);
