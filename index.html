@@ -108,6 +108,8 @@
       const reply = await fetchNextQuestion();
       conversation.push({ role: 'assistant', content: reply });
       qEl.textContent = reply;
+  
+      console.log(reply);
 
       currentQuestion++;
       loading = false;
