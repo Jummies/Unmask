@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Unmasking Journey</title>
+  <title>Unmask Yourself</title>
   <style>
     body {
       margin: 0;
       padding: 0;
-      height: 100vh;
       background: black;
       color: white;
       font-family: 'Helvetica Neue', Inter, sans-serif;
@@ -16,36 +15,19 @@
       justify-content: center;
       align-items: center;
       flex-direction: column;
-      overflow: hidden;
-    }
-
-    .star {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: white;
-      border-radius: 50%;
-      animation: twinkle 3s infinite ease-in-out;
-      opacity: 0;
-    }
-
-    @keyframes twinkle {
-      0%, 100% { opacity: 0; }
-      50% { opacity: 1; }
+      height: 100vh;
     }
 
     #container {
       max-width: 600px;
       text-align: center;
       padding: 20px;
-      z-index: 1;
     }
 
     .question {
       font-size: 1.5rem;
       margin-bottom: 20px;
-      opacity: 0;
-      animation: fadeIn 1s forwards;
+      animation: fadeIn 1s ease forwards;
     }
 
     input[type="text"] {
@@ -55,137 +37,120 @@
       color: white;
       width: 100%;
       font-size: 1rem;
-      outline: none;
-      transition: border 0.3s;
-    }
-
-    input[type="text"]:focus, input[type="text"]:hover {
-      border-color: #999;
+      margin-bottom: 20px;
     }
 
     button {
-      margin-top: 20px;
+      padding: 10px 20px;
       background: none;
       border: 1px solid white;
       color: white;
-      padding: 10px 20px;
-      font-size: 1rem;
       cursor: pointer;
-      transition: all 0.3s ease;
-      border-radius: 6px;
+      transition: all 0.3s;
     }
 
     button:hover {
       background: white;
       color: black;
-      transform: scale(1.05);
-    }
-
-    @keyframes fadeIn {
-      to { opacity: 1; }
     }
 
     #result {
-      white-space: pre-line;
-      margin-top: 20px;
+      margin-top: 30px;
       font-size: 1.2rem;
-      line-height: 1.6;
-      opacity: 0;
-      animation: fadeIn 1s forwards;
+      white-space: pre-wrap;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
   </style>
 </head>
 <body>
   <div id="container">
     <div id="question" class="question"></div>
-    <input id="answer" type="text" placeholder="Type your answer...">
+    <input id="answer" type="text" placeholder="Type your answer..." />
     <button onclick="nextStep()">Next</button>
     <div id="result"></div>
   </div>
+
   <script>
-    let current = 0;
-    const conversation = [];
     const qEl = document.getElementById('question');
     const aEl = document.getElementById('answer');
     const resultEl = document.getElementById('result');
+    let conversation = [];
+    let currentQuestion = 0;
+    let loading = false;
 
-    const systemPrompt = `I want to uncover the mask and I recently wearing the roles im playing the illusions I believing please guide me throughthe process by asking 10 reflecting questions one at a time to help me recognise the stories im telling myself after i answer the 10th question please step into a role of my higher self and analyse my responses identify the top negative patterns present in my life and the top positive patterns i can embrace and grow be direct and truthful tough love is welcome provide me daily affirmations to support my growth actionable steps to change my behaviours and embody my authentic self and a message of encouragement from my height self to celebrate how far Ive come on my journey.`;
-
-    async function askNextQuestion() {
-      const response = await fetch('/api/ask', {
+    async function fetchNextQuestion() {
+      const res = await fetch('/api/ask', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ conversation })
       });
-
-      const data = await response.json();
-      const message = data.choices[0].message.content;
-      qEl.textContent = message;
-      qEl.style.animation = 'fadeIn 1s forwards';
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content || 'Error: No response';
     }
 
     async function nextStep() {
-      const val = aEl.value.trim();
-      if (!val) return;
-      conversation.push({ role: 'user', content: val });
+      if (loading) return;
+      const input = aEl.value.trim();
+      if (currentQuestion > 0 && input) {
+        conversation.push({ role: 'user', content: input });
+      }
+
       aEl.value = '';
-      current++;
+      qEl.textContent = 'Loading...';
+      loading = true;
 
-      if (current < 10) {
-        await conversation.push({ role: 'assistant', content: qEl.textContent });
-        await askNextQuestion();
-      } else {
-        // Final analysis
-        qEl.style.display = 'none';
-        aEl.style.display = 'none';
-        document.querySelector('button').style.display = 'none';
-        resultEl.textContent = 'Analyzing your journey...';
+      const reply = await fetchNextQuestion();
+      conversation.push({ role: 'assistant', content: reply });
+      qEl.textContent = reply;
 
-        const finalResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer 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',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'gpt-4',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              ...conversation
-            ]
-          })
-        });
+      currentQuestion++;
+      loading = false;
 
-        const finalData = await finalResponse.json();
-        const finalMessage = finalData.choices[0].message.content;
-        resultEl.textContent = finalMessage;
-        resultEl.style.animation = 'fadeIn 1s forwards';
-
-        // Email the result (mocked with webhook or service)
-        fetch('https://maker.ifttt.com/trigger/send_email/with/key/b2PuzSH3AYhn5vh2hvmES-', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            value1: 'jumpark1210@gmail.com',
-            value2: finalMessage,
-            value3: JSON.stringify(conversation)
-          })
-        });
+      if (currentQuestion > 10) {
+        finalize();
       }
     }
 
-    askNextQuestion();
+    async function finalize() {
+      qEl.style.display = 'none';
+      aEl.style.display = 'none';
+      document.querySelector('button').style.display = 'none';
+      resultEl.textContent = 'Analyzing your journey...';
 
-    // Generate stars
-    for (let i = 0; i < 100; i++) {
-      const star = document.createElement('div');
-      star.className = 'star';
-      star.style.top = Math.random() * 100 + 'vh';
-      star.style.left = Math.random() * 100 + 'vw';
-      star.style.animationDelay = (Math.random() * 5) + 's';
-      document.body.appendChild(star);
+      const final = await fetch('/api/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ conversation })
+      });
+      const data = await final.json();
+      const result = data.choices?.[0]?.message?.content || 'No analysis returned';
+      resultEl.textContent = result;
+
+      // Email via IFTTT (if integrated)
+      fetch('https://maker.ifttt.com/trigger/send_email/with/key/b2PuzSH3AYhn5vh2hvmES-', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          value1: 'jumpark1210@gmail.com',
+          value2: result,
+          value3: JSON.stringify(conversation)
+        })
+      });
+    }
+
+    // Initial system prompt kickstart
+    window.onload = async () => {
+      const first = await fetchNextQuestion();
+      conversation.push({ role: 'assistant', content: first });
+      qEl.textContent = first;
     }
   </script>
 </body>
